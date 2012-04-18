@@ -1,11 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from elixir import Entity, Field, String, ManyToOne, DateTime, Integer, metadata, create_all, setup_all
+from elixir import Entity, Field, String, ManyToOne, Integer, metadata, ManyToMany, create_all, setup_all
 
 
 class Genre(Entity):
-    url = Field(String(256))
     name = Field(String(256))
     parent = ManyToOne('Genre')
 
@@ -26,15 +25,22 @@ class Stream(Entity):
             setattr(self, key, value)
 
 
-class Station(Entity):
-    url = Field(String(256))
-    name = Field(String(256))
-    date = Field(DateTime)
+class Bitrate(Entity):
+    name = Field(String(8))
 
-    bitrate = Field(Integer)
+    def __init__(self, **kwars):
+        for key, value in kwars.items():
+            setattr(self, key, value)
+
+
+class Station(Entity):
+    name = Field(String(256))
+    url = Field(String(256))
+
+    bitrate = ManyToOne('Bitrate')
     stream = ManyToOne('Stream')
 
-    genre = ManyToOne('Genre')
+    genres = ManyToMany('Genre')
 
     def __init__(self, **kwars):
         for key, value in kwars.items():
@@ -55,5 +61,5 @@ def get_or_create(model, **kwargs):
 metadata.bind = 'sqlite:///shoutcast.com.db'
 metadata.bind.echo = False
 
-#create_all()
+create_all()
 setup_all(create_tables=True)

@@ -19,148 +19,126 @@ additional_headers = {
 
 
 class ShoutCastCom(Spider):
-    def prepare(self):
-        self.grab = Grab()
-        self.grab.setup(headers=additional_headers)
-
-    def get_grab(self, url=None):
-        grab = self.grab.clone()
-        if url:
-            grab.setup(url=url)
-        return grab
-
-    def get_task(self, **kwargs):
-        grab = self.grab.clone()
-
-        if 'grab' in kwargs:
-            grab.setup(**kwargs['grab'])
-            del kwargs['grab']
-
-        return Task(
-                grab=grab,
-                **kwargs
+    def __init__(self, *kargs, **kwargs):
+        super(ShoutCastCom, self).__init__(*kargs, **kwargs)
+        self.setup_grab(
+                headers=additional_headers,
+                #log_dir='/tmp/shout/'
             )
-
-    def get_kwargs(self, **kwargs):
-        return kwargs
 
     def task_generator(self):
-        self.grab_genres()
-
-        for genre in model.Genre.query.all():
-            yield self.get_next_stations(genre)
-
-        raise StopIteration
-
-    def get_next_stations(self, genre, last=0):
-        url = 'http://www.shoutcast.com/genre-ajax/%s' % (quote(genre.name))
-        grab_options = self.get_kwargs(
-                post={
-                        'strIndex': last,
-                        'count': 10,
-                        #'ajax': 'true',
-                        #'mode': 'listeners',
-                        #'order': 'desc',
-                    },
-                log_dir='/tmp/shout/',
-                url=url
+        yield Task(
+                name='genres',
+                url='http://www.shoutcast.com/'
             )
 
-        return self.get_task(
+    def task_genres(self, grab, task):
+        genres = grab.xpath_list('//li[@class="prigen"]/a/text()')
+
+        for genre in genres:
+            genre_record = model.get_or_create(
+                    model.Genre,
+                    name=genre,
+                    parent=None
+                )
+
+            grab = self.create_grab_instance()
+            grab.setup(
+                    url='http://www.shoutcast.com/genre.jsp',
+                    post=dict(genre=genre),
+                )
+
+            yield Task(
+                    name='subgenres',
+                    genre=genre_record,
+                    grab=grab
+                )
+
+            yield self.new_stations_task(
+                    genre=genre_record,
+                    start_index=0
+                )
+
+    def task_subgenres(self, grab, task):
+        subgenres = grab.xpath_list('//li[@class="secgen"]/a/text()')
+
+        for subgenre in subgenres:
+            subgenre_record = model.get_or_create(
+                    model.Genre,
+                    name=subgenre,
+                    parent=task.genre
+                )
+
+            yield self.new_stations_task(
+                    genre=subgenre_record,
+                    start_index=0
+                )
+
+    def new_stations_task(self, genre, start_index, count=100):
+        url = 'http://www.shoutcast.com/genre-ajax/%s' % (quote(genre.name))
+
+        grab = self.create_grab_instance()
+        grab.setup(
+                url=url,
+                post=dict(
+                        strIndex=start_index,
+                        count=count,
+                    )
+            )
+
+        return Task(
                 name='stations',
                 genre=genre,
-                last=last + 10,
-                grab=grab_options
+                grab=grab,
+                last=start_index + count
             )
 
     def task_stations(self, grab, task):
-        if grab.xpath_exists('//span[contains(text(), "show more")]'):
-            yield self.get_next_stations(
-                    task.genre,
-                    task.last
+        #grab.xpath_exists('//span[contains(text(), "show more")]'):
+
+        stations = grab.xpath_list('//div[@class="dirlist"]')
+
+        print len(stations), task.last / 100, task.genre
+
+        if len(stations) == 100:
+            yield self.new_stations_task(
+                    genre=task.genre,
+                    start_index=task.last
                 )
 
-        for dirlist in grab.xpath_list('//div[@class="dirlist"]'):
+        for dirlist in stations:
             info = dirlist.xpath('./div[1]/a[1]')[0]
             url, name = info.get('href'), info.get('name')
 
             stream = dirlist.xpath('./div[@class="dirtype"]/text()')[0]
             bitrate = dirlist.xpath('./div[@class="dirbitrate"]/text()')[0]
 
-            '''print '  %s[%s] - %s [%s]' % (
-                    stream,
-                    bitrate,
-                    name,
-                    url
-                )'''
-
-            self.get_station(
-                    name,
-                    url,
-                    stream,
-                    bitrate,
-                    task.genre
+            stream = model.get_or_create(
+                    model.Stream,
+                    name=stream
                 )
 
-        session.commit()
-
-    def get_genre(self, name, url, parent=None):
-        return model.get_or_create(
-                model.Genre,
-                name=name,
-                url=url,
-                parent=parent
-            )
-
-    def get_station(self, name, url, stream, bitrate, genre):
-        stream = model.get_or_create(
-                model.Stream,
-                name=stream
-            )
-        return model.get_or_create(
-                model.Station,
-                name=name,
-                url=url,
-                stream=stream,
-                bitrate=bitrate,
-                genre=genre,
-            )
-
-    def grab_genres(self):
-        grab = self.get_grab('http://www.shoutcast.com/')
-        grab.request()
-
-        grab.setup(url='http://www.shoutcast.com/genre.jsp')
-
-        for genre in grab.xpath_list('//li[@class="prigen"]/a'):
-            genre = self.get_genre(
-                    name=genre.xpath('./text()')[0],
-                    url=genre.get('href')
+            bitrate = model.get_or_create(
+                    model.Bitrate,
+                    name=bitrate
                 )
 
-            grab.setup(
-                    post={
-                            'genre': genre.name
-                        }
+            station = model.get_or_create(
+                    model.Station,
+                    name=name,
+                    url=url,
+                    stream=stream,
+                    bitrate=bitrate
                 )
-            grab.request()
 
-            for subgenre in grab.xpath_list('//li[@class="secgen"]/a'):
-                subgenre = self.get_genre(
-                        name=subgenre.xpath('./text()')[0],
-                        url=subgenre.get('href'),
-                        parent=genre
-                    )
+            station.genres.append(task.genre)
 
-        session.commit()
+        if len(stations):
+            session.commit()
 
 
 if __name__ == '__main__':
-    print model.Genre.query.count()
-    print model.Stream.query.count()
-    print model.Station.query.count()
-
-    parser = ShoutCastCom(thread_number=1)
+    parser = ShoutCastCom(thread_number=10)
     parser.run()
 
     sys.exit()
