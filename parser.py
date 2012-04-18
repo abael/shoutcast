@@ -59,8 +59,6 @@ class ShoutCastCom(Spider):
                     start_index=0
                 )
 
-            break
-
     def task_subgenres(self, grab, task):
         subgenres = grab.xpath_list('//li[@class="secgen"]/a/text()')
 
