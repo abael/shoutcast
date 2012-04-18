@@ -24,6 +24,9 @@ class Stream(Entity):
         for key, value in kwars.items():
             setattr(self, key, value)
 
+    def __repr__(self):
+        return '<%s>' % (self.name)
+
 
 class Bitrate(Entity):
     name = Field(String(8))
@@ -31,6 +34,9 @@ class Bitrate(Entity):
     def __init__(self, **kwars):
         for key, value in kwars.items():
             setattr(self, key, value)
+
+    def __repr__(self):
+        return '<%s>' % (self.name)
 
 
 class Station(Entity):

@@ -9,7 +9,9 @@ import model
 if __name__ == '__main__':
     print u'Жанров: %d' % (model.Genre.query.count())
     print u'Битрейтов: %d' % (model.Bitrate.query.count())
+    print '   ', sorted([int(bitrate.name) for bitrate in model.Bitrate.query.all()])
     print u'Потоков: %d' % (model.Stream.query.count())
+    print '   ', sorted([stream.name for stream in model.Stream.query.all()])
     print u'Радиостанций: %d' % (model.Station.query.count())
 
     total = 0

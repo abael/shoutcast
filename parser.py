@@ -59,6 +59,8 @@ class ShoutCastCom(Spider):
                     start_index=0
                 )
 
+            break
+
     def task_subgenres(self, grab, task):
         subgenres = grab.xpath_list('//li[@class="secgen"]/a/text()')
 
@@ -90,20 +92,16 @@ class ShoutCastCom(Spider):
                 name='stations',
                 genre=genre,
                 grab=grab,
-                last=start_index + count
+                last=start_index
             )
 
     def task_stations(self, grab, task):
-        #grab.xpath_exists('//span[contains(text(), "show more")]'):
-
         stations = grab.xpath_list('//div[@class="dirlist"]')
 
-        print len(stations), task.last / 100, task.genre
-
-        if len(stations) == 100:
+        if grab.xpath_exists('//span[contains(text(), "show more")]'):
             yield self.new_stations_task(
                     genre=task.genre,
-                    start_index=task.last
+                    start_index=task.last + len(stations)
                 )
 
         for dirlist in stations:
@@ -138,7 +136,7 @@ class ShoutCastCom(Spider):
 
 
 if __name__ == '__main__':
-    parser = ShoutCastCom(thread_number=10)
+    parser = ShoutCastCom(thread_number=20)
     parser.run()
 
     sys.exit()
