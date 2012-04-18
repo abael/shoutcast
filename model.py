@@ -66,20 +66,8 @@ def get_or_create(model, **kwargs):
         return model(**kwargs)
 
 
-def drop_database():
-    try:
-        drop_all()
-    except:
-        pass
-    create_all()
-
-
-def create_database():
-    create_all()
-
-
-#metadata.bind = 'sqlite:///shoutcast.com.db' # fuck sqlite too slooow
 metadata.bind = 'mysql://root:654321@localhost/shoutcast'
 metadata.bind.echo = False
 
+create_all()
 setup_all()

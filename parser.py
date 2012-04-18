@@ -3,6 +3,7 @@
 
 import sys
 from urllib import quote
+from optparse import OptionParser
 
 from grab import Grab
 from grab.spider import Spider, Task
@@ -101,8 +102,22 @@ class ShoutCastCom(Spider):
             session.commit()
 
 
-if __name__ == '__main__':
-    parser = ShoutCastCom(thread_number=20)
+def main():
+    parser = OptionParser(description=u'Парсер радиостанций www.ShoutCast.com')
+
+    parser.add_option('-t',
+                      action="store",
+                      dest='threads_count',
+                      default=10,
+                      help=u'количество потоков')
+
+    options, _ = parser.parse_args()
+
+    parser = ShoutCastCom(thread_number=options.threads_count)
     parser.run()
 
     sys.exit()
+
+
+if __name__ == '__main__':
+    main()
