@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from elixir import Entity, Field, String, ManyToOne, Integer, metadata, ManyToMany, create_all, setup_all
+from elixir import Entity, Field, String, ManyToOne, Integer, metadata, ManyToMany, create_all, setup_all, drop_all
 
 
 class Genre(Entity):
@@ -64,8 +64,20 @@ def get_or_create(model, **kwargs):
         return model(**kwargs)
 
 
-metadata.bind = 'sqlite:///shoutcast.com.db'
+def drop_database():
+    try:
+        drop_all()
+    except:
+        pass
+    create_all()
+
+
+def create_database():
+    create_all()
+
+
+#metadata.bind = 'sqlite:///shoutcast.com.db' # fuck sqlite too slooow
+metadata.bind = 'mysql://root:654321@localhost/shoutcast'
 metadata.bind.echo = False
 
-create_all()
-setup_all(create_tables=True)
+setup_all()
