@@ -1,7 +1,9 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from elixir import Entity, Field, String, ManyToOne, Integer, metadata, ManyToMany, create_all, setup_all, drop_all
+from elixir import (metadata, Entity, ManyToOne, ManyToMany,
+                    Field, String,
+                    create_all, setup_all, drop_all)
 
 
 class Genre(Entity):
