@@ -97,7 +97,7 @@ class ShoutCastCom(Spider):
 
             station.genres.append(task.genre)
 
-        if len(stations):
+        if stations:
             session.commit()
 
 
